@@ -207,8 +207,75 @@ def test_softmax(n_updates=250):
         ax2.set_title('blue: true class, grayscale: probs assigned by model')
 
 
+def test_Oscillator(n_updates=50):
+    """ Test RNN with real-valued outputs. """
+    n_hidden = 250
+    n_in = 1
+    n_out = 2
+    n_steps = 200
+    n_seq = 1
+    fracZero = 2
+
+    np.random.seed(np.random.randint(200)+52)
+    baseFreq = np.linspace(0,numpy.pi*4,n_steps)
+    seq = np.zeros((n_seq,n_steps,n_in))
+    #sigDecay = np.zeros((n_steps/2))
+    #sigDecay[:(n_steps/fracZero)/2] = np.linspace(1,0,(n_steps/fracZero)/2)
+    #seqSig = sigDecay * np.cos(baseFreq)/2 + 1
+    #seq[:,n_steps/4:n_steps*3/4,0] = np.tile(seqSig,(n_seq,1))
+    #seq[:,n_steps/4:3*n_steps/4,0]]
+    seq[:,:n_steps/fracZero,0] = np.tile(np.linspace(1,0,num=n_steps/fracZero) * np.cos(baseFreq[:n_steps/fracZero]),(n_seq,1))
+    #seq = np.random.randn(n_seq, n_steps, n_in)
+    targets = np.zeros((n_seq, n_steps, n_out))
+
+    targets[:, :, 0] = np.tile(np.cos(baseFreq),(n_seq,1))
+    targets[:, :, 1] = np.tile(np.sin(baseFreq),(n_seq,1))
+
+    # SequenceDataset wants a list of sequences
+    # this allows them to be different lengths, but here they're not
+    seq = [i for i in seq]
+    targets = [i for i in targets]
+
+    gradient_dataset = SequenceDataset([seq, targets], batch_size=None,
+                                       number_batches=2)
+    cg_dataset = SequenceDataset([seq, targets], batch_size=None,
+                                 number_batches=2)
+
+    model = MetaRNN(n_in=n_in, n_hidden=n_hidden, n_out=n_out,
+                    activation='cappedrelu')
+
+    opt = hf_optimizer(p=model.rnn.params, inputs=[model.x, model.y],
+                       s=model.rnn.y_pred,
+                       costs=[model.rnn.loss(model.y)], h=model.rnn.h)
+
+    opt.train(gradient_dataset, cg_dataset, num_updates=n_updates)
+
+    plt.close('all')
+    fig = plt.figure()
+    ax1 = plt.subplot(211)
+    plt.plot(seq[0])
+    ax1.set_title('input')
+    ax2 = plt.subplot(212)
+    true_targets = plt.plot(targets[0])
+
+    guess = model.predict(seq[0])
+    guessed_targets = plt.plot(guess, linestyle='--')
+    for i, x in enumerate(guessed_targets):
+        x.set_color(true_targets[i].get_color())
+    ax2.set_title('solid: true output, dashed: model output')
+            
+    return model
+
 if __name__ == "__main__":
+    modelName = 'test001_'
     logging.basicConfig(level=logging.INFO)
-    test_real(n_updates=20)
+    model = test_Oscillator()
+    np.savetxt(modelName + 'W_hh.txt',model.rnn.params[0].get_value())
+    np.savetxt(modelName + 'W_in.txt',model.rnn.params[1].get_value())
+    np.savetxt(modelName + 'W_out.txt',model.rnn.params[2].get_value())
+    np.savetxt(modelName + 'h0.txt',model.rnn.params[3].get_value())
+    np.savetxt(modelName + 'b_h.txt',model.rnn.params[4].get_value())
+    np.savetxt(modelName + 'b_y.txt',model.rnn.params[5].get_value())
+
     #test_binary(multiple_out=True, n_updates=20)
     #test_softmax(n_updates=20)

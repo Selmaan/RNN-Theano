@@ -935,10 +935,55 @@ def test_softmax(n_epochs=250, optimizer='cg'):
         ax2.set_title('blue: true class, grayscale: probs assigned by model')
 
 
+def test_Oscillator(n_epochs=1000):
+    """ Test RNN with real-valued outputs. """
+    n_hidden = 100
+    n_in = 1
+    n_out = 2
+    n_steps = 100
+    n_seq = 10
+    n_batches = 10
+
+    np.random.seed(0)
+    seq = np.zeros((n_steps, n_seq * n_batches, n_in))
+    targets = np.zeros((n_steps, n_seq * n_batches, n_out))
+    baseFreq = numpy.linspace(0,numpy.pi*4,n_steps)
+    
+    for seqID in range(n_seq*n_batches):
+     #   seq[:,seqID,0] = np.cos(baseFreq)
+        seq[0,seqID,0] = 1
+        targets[:,seqID,0] = np.cos(baseFreq)
+        targets[:,seqID,1] = np.sin(baseFreq)
+    
+    #seq = np.random.randn(n_steps, n_seq * n_batches, n_in)
+
+
+    model = MetaRNN(n_in=n_in, n_hidden=n_hidden, n_out=n_out,
+                    learning_rate=0.01, learning_rate_decay=0.999,
+                    n_epochs=n_epochs, batch_size=n_seq, activation='relu',
+                    L2_reg=1e-3)
+
+    model.fit(seq, targets, validate_every=100, optimizer='bfgs')
+
+    plt.close('all')
+    fig = plt.figure()
+    ax1 = plt.subplot(211)
+    plt.plot(seq[:, 0, :])
+    ax1.set_title('input')
+    ax2 = plt.subplot(212)
+    true_targets = plt.plot(targets[:, 0, :])
+
+    guess = model.predict(seq[:, 0, :][:, np.newaxis, :])
+
+    guessed_targets = plt.plot(guess.squeeze(), linestyle='--')
+    for i, x in enumerate(guessed_targets):
+        x.set_color(true_targets[i].get_color())
+    ax2.set_title('solid: true output, dashed: model output')
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     t0 = time.time()
-    test_real(n_epochs=1000)
+    test_Oscillator(n_epochs=250)
     #test_binary(optimizer='sgd', n_epochs=1000)
     #test_softmax(n_epochs=250, optimizer='sgd')
     print "Elapsed time: %f" % (time.time() - t0)

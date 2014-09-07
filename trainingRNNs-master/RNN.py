@@ -139,13 +139,21 @@ def jobman(state, channel):
             W_hh[dx][spng[15:]] = 0.
         sr = numpy.max(abs(numpy.linalg.eigvals(W_hh)))
         W_hh = numpy.float32(.95* W_hh/sr)
-
         W_hy = numpy.asarray(
             rng.normal(size=(n_hidden, nout), loc=0.0, scale = .01), dtype = floatX)
         b_hh = numpy.zeros((n_hidden,), dtype=floatX)
         b_hy = numpy.zeros((nout,), dtype=floatX)
         activ = TT.tanh
-
+    elif state['init'] == 'basic_relu':
+        W_uh = numpy.asarray(
+            rng.normal(size=(nin, n_hidden), scale= .2, loc = .0), dtype = floatX)
+        W_hh = numpy.asarray(
+            rng.normal(size=(n_hidden, n_hidden), scale=.2, loc = .0), dtype = floatX)
+        W_hy = numpy.asarray(
+            rng.normal(size=(n_hidden, nout), scale =.2, loc=0.0), dtype = floatX)
+        b_hh = numpy.zeros((n_hidden,), dtype=floatX)
+        b_hy = numpy.zeros((nout,), dtype=floatX)
+        activ = lambda x: TT.sqrt(x * (x > 0))
 
     W_uh = theano.shared(W_uh, 'W_uh')
     W_hh = theano.shared(W_hh, 'W_hh')
@@ -463,9 +471,9 @@ if __name__=='__main__':
     # as well
     state = {}
     # Number of hidden units
-    state['nhid'] = 50
+    state['nhid'] = 100
     # Random seed
-    state['seed'] = 52 +numpy.random.randint(1e3)
+    state['seed'] = 52 +numpy.random.randint(1e2)
     # Task to execute. Pick from:
     #   * dMTS    - dMTS Task
     #   * dCue    - dCue Task
@@ -496,21 +504,22 @@ if __name__=='__main__':
     #   * sigmoid
     #   * basic_tanh
     #   * smart_tanh
-    state['init'] = 'smart_tanh'
+    #   * basic_relu
+    state['init'] = 'sigmoid'
     # Strength of the regularization term proposed in the paper
-    state['alpha'] = 2.0
+    state['alpha'] = 2.0 #2.
     # Learning rate
-    state['lr'] = .001 #.01
+    state['lr'] = .01 #.01
     # Maximal length of the task and minimal length of the task.
-    state['max_length'] = 110
-    state['min_length'] = 90
+    state['max_length'] = 65
+    state['min_length'] = 35
     # Maximum cost at which to terminate training
     state['costThresh'] = 0.2 #0.2 for dCue, 
     # Prefix to be appended to name of the file in which the state of the
     # experiemt is stored.
     state['L1_act'] = 0 #0
     state['L1_conn'] = 0 #0
-    state['name'] = 'dCue_(90-110)'
+    state['name'] = 'dCue_(25-75)'
 
     state['memvalues'] = 5
     state['mempos'] = 10

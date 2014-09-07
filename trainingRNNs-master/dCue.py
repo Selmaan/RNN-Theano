@@ -24,9 +24,9 @@ class dCueTask(object):
         v0 = self.rng.randint(2, size=(batchsize,))
         targ_vals = v0
         vals  = numpy.zeros((l, batchsize)) #numpy.random.normal(loc = 0, scale = .1, size = (l, batchsize))
-        for trialNum in range(batchsize):
-            vals[range(p0[trialNum]-int(l*.1),p0[trialNum]), trialNum] = 2*v0[trialNum]-1
-        #vals[p0, numpy.arange(batchsize)] = 10*(v0-.5)
+        #for trialNum in range(batchsize):
+        #    vals[range(p0[trialNum]-int(l*.1),p0[trialNum]), trialNum] = 2*v0[trialNum]-1
+        vals[p0, numpy.arange(batchsize)] = 10*(v0-.5)
         data = numpy.zeros((l, batchsize, 1), dtype=self.floatX)
         targ = numpy.zeros((batchsize, 2), dtype=self.floatX)
         data[:,:,0] = vals

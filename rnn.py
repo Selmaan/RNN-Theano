@@ -52,10 +52,13 @@ class RNN(object):
         W_init = np.asarray(np.random.uniform(size=(n_hidden, n_hidden),
                                               low=-.01, high=.01),
                                               dtype=theano.config.floatX)
+#        W_init = np.asarray(np.random.normal(loc = 0, scale = 1/np.sqrt(n_hidden),
+#                                              size = (n_hidden,n_hidden)),
+#                                              dtype=theano.config.floatX)
         self.W = theano.shared(value=W_init, name='W')
         # input to hidden layer weights
         W_in_init = np.asarray(np.random.uniform(size=(n_in, n_hidden),
-                                                 low=-.01, high=.01),
+                                                 low=-.1, high=.1),
                                                  dtype=theano.config.floatX)
         self.W_in = theano.shared(value=W_in_init, name='W_in')
 
@@ -226,7 +229,8 @@ class MetaRNN(BaseEstimator):
         elif self.activation == 'relu':
             activation = lambda x: x * (x > 0)
         elif self.activation == 'cappedrelu':
-            activation = lambda x: T.minimum(x * (x > 0), 6)
+            #activation = lambda x: T.minimum(x * (x > 0), 6)
+            activation = lambda x: T.tanh(x * (x > 0))
         else:
             raise NotImplementedError
 
@@ -594,10 +598,49 @@ def test_softmax(n_epochs=250):
         ax2.set_title('blue: true class, grayscale: probs assigned by model')
 
 
+def test_Oscillator(n_epochs=400):
+    """ Test RNN with real-valued outputs. """
+    n_hidden = 50
+    n_in = 1
+    n_out = 2
+    n_steps = 100
+    n_seq = 1
+
+    np.random.seed(0)
+    # simple lag test
+    seq = np.ones((n_seq,n_steps,n_in))
+    seq[0,:,0] = np.cos(numpy.linspace(0,numpy.pi*4,n_steps))
+    #seq = np.random.randn(n_seq, n_steps, n_in)
+    targets = np.zeros((n_seq, n_steps, n_out))
+
+    targets[:, :, 0] = np.cos(numpy.linspace(0,numpy.pi*4,n_steps))
+    targets[:, :, 1] = np.sin(numpy.linspace(0,numpy.pi*4,n_steps))
+
+    model = MetaRNN(n_in=n_in, n_hidden=n_hidden, n_out=n_out,
+                    learning_rate=0.001, learning_rate_decay=0.999,
+                    n_epochs=n_epochs, activation='tanh')
+
+    model.fit(seq, targets, validation_frequency=1000)
+
+    plt.close('all')
+    fig = plt.figure()
+    ax1 = plt.subplot(211)
+    plt.plot(seq[0])
+    ax1.set_title('input')
+
+    ax2 = plt.subplot(212)
+    true_targets = plt.plot(targets[0])
+
+    guess = model.predict(seq[0])
+    guessed_targets = plt.plot(guess, linestyle='--')
+    for i, x in enumerate(guessed_targets):
+        x.set_color(true_targets[i].get_color())
+    ax2.set_title('solid: true output, dashed: model output')
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     t0 = time.time()
-    test_real()
+    test_Oscillator(n_epochs = 2500)
     # problem takes more epochs to solve
     #test_binary(multiple_out=True, n_epochs=2400)
     #test_softmax(n_epochs=250)
